@@ -1,0 +1,698 @@
+---
+title: "Social Participation Intersectionality code testing"
+author: "Yan Liu and Tim Riffe"
+date: "2023-10-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, eval = FALSE}
+install.packages("brms")
+install.packages("ggmcmc")
+install.packages("arm")
+install.packages("survey")
+install.packages("srvyr")
+install.packages("jtools")
+install.packages("cowplot")
+install.packages("expss")
+install.packages("ggh4x")
+install.packages("haven")
+install.packages("miceadds")
+install.packages("rio")
+install.packages("tidyverse")
+install.packages("WriteXLS")
+install.packages("parallel")
+install.packages("future")
+install.packages("tictoc")
+install.packages("tidybayes")
+install.packages("readxl")
+```
+
+```{r, message = FALSE, warning=FALSE}
+library(brms)
+library(ggmcmc)
+library(arm)
+library(survey)
+library(srvyr)
+library(jtools)
+library(cowplot)
+library(expss)
+library(ggh4x)
+library(haven)
+library(miceadds)
+library(rio)
+library(tidyverse)
+library(WriteXLS)
+library(parallel)
+library(future)
+library(tictoc)
+library(tidybayes)
+library(readxl)
+
+set.seed(195)
+
+```
+
+
+Read data 
+```{r}
+data <- haven::read_dta("Data/new-data.dta")
+
+head(data)
+#列出名为data的对象中所包含的所有变量或对象的名称列表
+ls(data)
+
+#创建一个频数表/频率表来统计data数据集中male变量的不同取值及其对应的出现次数
+#原文的应用是虚拟变量的情况
+table(data$male)
+
+```
+
+为了确保该变量被正确解释为数值型，在这里我们首先使用 as.character() 将其转换为字符型，然后再使用 as.numeric() 将其转换为数值型，并将结果重新赋值给 data
+To ensure that the variable is correctly interpreted as a numeric value,Here we first use as.character() to convert it to a character type,Then use as.numeric() to convert it to a numeric type,and reassign the result to data
+```{r}
+data$male  <- as.numeric(as.character(data$male))
+data$health  <- as.numeric(as.character(data$health))
+data$ses  <- as.numeric(as.character(data$ses))
+data$sp  <- as.numeric(as.character(data$sp))
+```
+
+对数据框中的变量进行频数统计，并输出一个频数表。这将帮助你了解变量的分布情况
+performs frequency statistics on the variables in the data frame and outputs a frequency table.To understand the distribution of the variable
+```{r}
+table(data$sp)
+table(data$male)
+table(data$health)
+table(data$ses)
+```
+
+查看变量的数据结构
+View variable data structure
+```{r}
+str(data$sp)
+str(data$male)
+str(data$health)
+str(data$ses)
+
+str(data$id)
+# rid is ID ,like the country,抓换成character
+
+as.character(data$id)
+
+str(data$id)
+
+```
+
+将名为 data的对象转换为一个数据框，并将结果重新赋值给 data
+Convert the object named data into a data frame,and reassign the result to data
+```{r}
+data <- as.data.frame(data)
+```
+
+将处理后的结果重新赋值给data数据框的所有列，
+从而移除了每列的属性。
+通常用于简化数据的结构，
+特别是在数据预处理阶段。移除属性后，
+数据框中的每个变量只保留其基本的数据结构，
+不再包含额外的属性信息。
+这有助于确保数据的干净和简洁，使其更适合用于后续的分析和建模。
+请注意，这行代码将修改data数据框本身，
+并且在运行后，data的所有列将不再包含额外的属性。
+Reassign the processed results to all columns of the data frame,
+Thus removing the attribute for each column.
+Often used to simplify the structure of data,
+Especially in the data preprocessing stage. After removing the attribute,
+Each variable in the data frame retains only its basic data structure,
+No additional attribute information is included.
+This helps ensure that the data is clean and concise, making it more suitable for subsequent analysis and modeling.
+Note that this line of code will modify the data frame itself,
+And after running, all columns of data will no longer contain extra attributes.
+
+```{r}
+data[] <- lapply(data, function(x) {attributes(x) <- NULL;x})
+```
+
+查看变量的数据结构
+View variable data structure
+```{r}
+str(data$sp)
+str(data$male)
+str(data$health)
+str(data$ses)
+str(data$id)
+```
+
+
+你将得到一个名为 std 的列表，
+其中包含所有变量的均值和标准差信息。
+命令经过修改：将data[,v]改为了data[[v]]
+这是因为你的数据框data中的列名是字符向量
+所以在循环中使用双括号[[ ]]来提取对应的列数据。
+现在，这个循环应该能够计算"sp"、"male"、
+"ses"和"health"这四个列的均值和标准差，并将结果存储在std列表中。
+You will get a list named std,
+It contains mean and standard deviation information for all variables.
+The command has been modified: changed data[,v] to data[[v]]
+This is because the column names in your data frame data are character vectors
+So use double brackets [[ ]] in the loop to extract the corresponding column data.
+Now, the loop should be able to calculate "sp", "male",
+The mean and standard deviation of the four columns "ses" and "health" and store the result in the std list.
+
+```{r}
+
+new_data <-
+  data |> 
+  group_by(male, health, ses) |> 
+  mutate(strata = cur_group_id()) |> 
+  select(id,strata,male,health,ses,sp) |> 
+  pivot_longer(-c(id,strata), names_to = "variable", values_to = "value") |> 
+  group_by(variable) |> 
+  mutate(n_value = (value - mean(value)) / sd(value)) |> 
+  ungroup() |> 
+  select(-value) |> 
+  pivot_wider(names_from = variable, values_from = n_value) |> 
+  ungroup() 
+```
+ 
+
+
+
+
+
+# ---- MAIHDA -----
+
+Add strata
+2 (male) x 2 (health) x 2 (ses) = 8 strata 
+
+
+Form intersectional strata Check whether sample sizes in strata are sufficiently large Assign a strata ID to each individual in the data set
+步骤 1形成交叉分层检查分层中的样本量是否足够大为数据集中的每个个体分配分层 ID
+
+```{r}
+#Example: Calculation of the percentage of strata with 10 or more individuals
+#Store total number of strata in an object:
+
+strata_n <- new_data |> 
+  group_by(strata) |> 
+  summarize(n = n())
+
+```
+
+
+
+
+
+Perform multilevel analysis to partition the  variance between and  within intersectional  strata 
+执行多级分析以划分交叉层之间和内部的方差
+
+(1) Variance decomposition in the simple intersectional model: Total variance in the outcome is decomposed into variance that can be attributed to
+(a) mean-level differences between intersectional strata and 
+(b) interindividual differences within intersectional strata
+
+(1) 简单交叉模型中的方差分解：结果的总方差被分解为可归因于 
+(a) 交叉层之间的平均水平差异和
+(b) 交叉层内个体间差异的方差
+
+
+```{r, eval = FALSE}
+#Calculate simple intersectional model1:
+
+model1 <- brm(sp ~ 1 + (1|strata),
+              data = new_data,
+              warmup = 5000, 
+              iter = 10000, 
+              chains = 1, seed = 123)
+
+
+#Extract variance:
+model1
+
+
+```
+
+
+
+
+(2) Variance decomposition in the intersectional interaction model: 
+    The intersectional interaction model extends the simple intersectional model by including the  additive main effects of different social categories at the strata level (as fixed effects) to compute the between- and within-strata variance after accounting for main effects
+(2) 交叉交互模型中的方差分解：
+   交叉交互模型扩展了简单交叉交互模型模型通过包括阶层层面不同社会类别的加性主效应（作为固定效应）来计算考虑主效应后的阶层间和阶层内方差
+
+```{r, eval = FALSE}
+#Calculate intersectional interaction model1
+
+model2 <- brm(sp ~ 1 + male + ses + health + (1|strata),
+              data = new_data,
+              warmup = 5000, 
+              iter = 10000, 
+              chains = 1, seed = 123)
+
+#Extract variance:
+model2
+pairs(model2)
+```
+ 
+Read in the previously-fit model results:
+```{r}
+model1 <- readRDS("Data/new-MAIHDA_model1.rds")
+model2 <- readRDS("Data/new-MAIHDA_model2.rds")
+```
+
+
+
+Data analysis: Analyses to answer the research questions
+数据分析：分析回答研究问题
+ 
+
+To what extent do complex interactions of social categories contribute incrementally to explaining sp inequalities?
+(1) Calculate the strata-level varianceattributable only to interaction effects, at least with respect to the variables included, by quantifying the adjusted VPC in the intersectional interaction model
+RQ 3：社会类别的复杂相互作用在多大程度上有助于解释社会参与不平等？
+(1) 通过量化交叉交互模型中调整后的VPC，计算仅归因于交互效应的层级方差，至少就所包含的变量而言
+
+
+```{r}
+# Variance at strata level model 1 分层水平的方差是v1=0.07435116
+coef_mat1 <- 
+  model1 |> 
+  posterior_summary() |> 
+  as.matrix() |> 
+  as.data.frame() |> 
+  rownames_to_column("coef") 
+v1 <-
+  coef_mat1 |> 
+  filter(coef == "sd_strata__Intercept") |> 
+  pull("Estimate") %>%
+  '^'(2)
+# Variance at individual level model 1 个体水平的方差s1=0.957085
+s1 <-
+  coef_mat1 |> 
+  filter(coef == "sigma") |> 
+  pull("Estimate") %>%
+  '^'(2)
+  
+# Calculate VPC model 1  #7.21
+round(100 * v1 / (v1 + s1),2)
+ 
+
+```
+
+```{r}
+# Variance at strata level model 2分层水平的方差是 v2=0.002062565
+coef_mat2 <- 
+  model2 |> 
+  posterior_summary() |> 
+  as.matrix() |> 
+  as.data.frame() |> 
+  rownames_to_column("coef") 
+v2 <-
+  coef_mat2 |> 
+  filter(coef == "sd_strata__Intercept") |> 
+  pull("Estimate") %>%
+  '^'(2)
+# Variance at individual level model 2 个体水平的方差s2=0.9573226
+s2 <-
+  coef_mat2 |> 
+  filter(coef == "sigma") |> 
+  pull("Estimate") %>%
+  '^'(2)
+
+ # Calculate VPC model 2  =0.21
+round(100 * v2 / (v2 + s2),2)
+ 
+ 
+```
+ 
+(2) Calculate the percentage of between-strata variance explained by the main effects by quantifying the PCV. The difference from 100% corresponds to the proportion of between-strata variance that is (likely) due to the existence of interaction effects between the social categories defining the strata(2)通过量化PCV，计算由主效应解释的层间方差的百分比。 与 100% 的差异对应于阶层间方差的比例，这（可能）是由于定义阶层的社会类别之间存在相互作用效应
+ 
+```{r}
+#Calculate the PCV (in %): =2.774085
+100 - 100 * (v1 - v2) / v1
+#Calculate the percentage of between-strata variance that cannot be explained by main effects (in %):
+
+# 100-pcv
+ 
+```
+ 
+ 
+
+  
+
+Extract random effects、 predicted and expected values
+```{r}
+
+#### Extract random effects
+bayes.random.effects <- brms::ranef(model2)
+
+# As data frame
+bayes.random.effects.new <- as.data.frame(bayes.random.effects$strata)
+
+#Round
+bayes.random.effects.new <- round(bayes.random.effects.new, 3)
+
+# Add strata number
+bayes.random.effects.new$strata <- 1:8
+
+# Change order of variables
+bayes.random.effects.new <- bayes.random.effects.new[,c(5,1,2,3,4)]
+
+
+
+strata_def <- 
+  data |> 
+  group_by(male, health, ses) |> 
+  summarize(strata = cur_group_id(), .groups = "drop") 
+bayes.random.effects.new |> colnames()
+bayes.random.effects.new |> 
+  left_join(strata_def, by= "strata") |> 
+  mutate(sex = if_else(male == 0, "female","male"),
+         health = if_else(health == 1, "healthy", "unhealthy"),
+         ses = if_else(ses == 1, "high ses", "low ses")) |> 
+  ggplot(aes(y = reorder(strata,Estimate.Intercept), x = Estimate.Intercept)) +
+  geom_point() +
+  theme_minimal() +
+  geom_pointrange(aes(xmin = Q2.5.Intercept, xmax = Q97.5.Intercept)) +
+  geom_vline(xintercept = 0) +
+  labs(title = "Random effects",
+       subtitle = "Interpreted as interractions (?)",
+       caption = "strata sorted by point estimate value",
+       y = "strata")
+
+```
+
+```{r}
+#### Extract predicted and expected values
+
+## This analysis is computationally very extensive. It might be sensible to calculate the predicted values and save 
+## the results, restart the script to conduct the rest of the analyses and load the results again when needed to 
+## plot the data.
+
+
+# Predicted average social participation per strata
+ 
+predicted.means.model2 <-
+                 model2 %>%
+                 epred_draws(newdata =new_data) %>% 
+                 group_by(strata) %>%
+                 mean_qi(.epred)
+
+predicted.means.model2 |> 
+  left_join(strata_def, by= "strata") |> 
+  mutate(sex = if_else(male == 0, "female","male"),
+         health = if_else(health == 1, "healthy", "unhealthy"),
+         ses = if_else(ses == 1, "high ses", "low ses")) |> 
+  ggplot(aes(y = reorder(strata,.epred), x = .epred)) +
+  geom_point() +
+  theme_minimal() +
+  geom_pointrange(aes(xmin = .lower, xmax = .upper)) +
+  geom_vline(xintercept = 0) +
+  labs(title = "predicted strata sp means",
+       subtitle = "comparable with empirical means",
+       caption = "strata sorted by point estimate value",
+       y = "strata",
+       x = "strata mean sp values")
+
+# save(predicted.means.model1, file = "predicted.means.model1.rds")
+#load("C:/Users/File/predicted.means.model1.rds")
+```
+
+
+```{r}
+
+# Expected average social participation per strata
+
+expected.means.model2 <- model2 %>%
+                             epred_draws(newdata = new_data, re_formula = NA) %>%
+                             group_by(strata) %>%
+                             mean_qi(.epred)
+
+View(expected.means.model2)
+expected.means.model2 |> 
+  left_join(strata_def, by= "strata") |> 
+  mutate(sex = if_else(male == 0, "female","male"),
+         health = if_else(health == 1, "healthy", "unhealthy"),
+         ses = if_else(ses == 1, "high ses", "low ses")) |> 
+  ggplot(aes(y = reorder(strata,.epred), x = .epred)) +
+  geom_point() +
+  theme_minimal() +
+  geom_pointrange(aes(xmin = .lower, xmax = .upper)) +
+  geom_vline(xintercept = 0) +
+  labs(title = "expected strata sp means",
+       subtitle = "comparable with empirical means",
+       caption = "strata sorted by point estimate value",
+       y = "strata",
+       x = "strata mean sp values")
+```
+
+```{r}
+# save(expected.means.model1, file = "expected.means.model1.rds")
+#load("C:/Users/File/expected.means.model2.rds")
+
+
+
+
+# Check whether difference between predicted and expected values equals random effects
+# show2 <- tibble(pred.mean2 = predicted.means.model2$sp, 
+                # expect.mean2 = expected.means.model2$sp,
+                # ranef_int2 = bayes.random.effects.new$Estimate.Intercept)
+# show2 |> 
+  # mutate(pred.mean2 - expect.mean2)
+
+# show2$diff <- show2$V1 - show2$V2
+# View(show2) # difference equals random effects
+
+
+
+ 
+# Check whether difference between predicted and expected values equals random effects
+show2 <- cbind(predicted.means.model2$.epred, expected.means.model2$.epred, bayes.random.effects.new$Estimate.Intercept)
+show2 <- as.data.frame(show2)
+show2$diff <- show2$V1 - show2$V2
+View(show2) # difference equals random effects
+
+# TR: predicted mean appears to be the same as the expected marginal mean from the model, plus the
+# random effects from the model. So the expected means are the pure margins of the model I guess
+# I'm just trying to reverse engineer what everything means.
+
+# TR: these are the same! So something isn't right 
+# LY:According to this code, there is a difference
+ 
+```
+
+Stop here:
+ 
+ 
+Merge average expected and predicted reading achievement per stratum
+```{r}
+predicted.means.model1 <- predicted.means.model1[,1:4]
+colnames(predicted.means.model1) <- c("strata", "predicted.mean.model1", "predicted.mean.model1.CI.lb", "predicted.mean.model1.CI.ub")
+
+predicted.means.model2 <- predicted.means.model2[,1:4]
+colnames(predicted.means.model2) <- c("strata", "predicted.mean.model2", "predicted.mean.model2.CI.lb", "predicted.mean.model2.CI.ub")
+
+expected.means.model2 <- expected.means.model2[,1:4]
+colnames(expected.means.model2) <- c("strata", "expected.mean.model2", "expected.mean.model2.CI.lb", "expected.mean.model2.CI.ub")
+
+predicted.expected.means <- full_join(predicted.means.model1, expected.means.model2, by = "strata") %>%             
+  full_join(., predicted.means.model2, by = "strata") 
+View(predicted.expected.means)
+```
+
+
+ 
+   
+
+
+
+
+
+```{r}
+
+# ---- Figure 2: Predicted values in strata x SP levels ---- #
+
+
+# Merge data with predicted values per stratum (model 1 and 2)
+df <- new_data 
+data.plot.new <- merge(df, predicted.means.model1, by = "strata")
+data.plot.new <- merge(data.plot.new, predicted.means.model2, by = "strata")
+
+
+# Rename values for plotting
+# LY: I guess we don't need to "Rename values for plotting"
+#data.plot.new <- data.plot.new %>% 
+  #dplyr::mutate(male = dplyr::recode(male, 
+                                     #  `0`="female",
+                                     #  `1`="male"))
+
+
+#data.plot.new <- data.plot.new %>% 
+ # dplyr::mutate(health = dplyr::recode(health, 
+                                            #  `1`="health",
+                                             # `2`="unhealth"))
+
+#data.plot.new <- data.plot.new %>% 
+  #dplyr::mutate(ses = dplyr::recode(ses, 
+                                             #   `1`="high ses",
+                                             #   `2`="low ses"))
+
+ 
+
+
+# Subset data
+data.plot.model1 <- subset(data.plot.new, select = c("strata", "male", "ses", "health", 
+                                                      "predicted.mean.model1", 
+                                                     "predicted.mean.model1.CI.lb", "predicted.mean.model1.CI.ub"))
+
+
+# Reduce data
+data.plot.model1 <- unique(data.plot.model1)
+
+
+
+
+# Plot
+figure2 <- ggplot(data = data.plot.model1, aes(x = predicted.mean.model1, y = gender, color = gender))
+figure2 <- figure2 + geom_rect(aes(xmin = 334.75, xmax = 407.47, ymin = -0.5, ymax = Inf, fill = "grey60"), colour = NA, alpha = 0.3)
+figure2 <- figure2 + geom_rect(aes(xmin = 407.47, xmax = 480.18, ymin = -0.5, ymax = Inf, fill = "grey70"), colour = NA, alpha = 0.3)
+figure2 <- figure2 + geom_rect(aes(xmin = 480.18, xmax = 552.89, ymin = -0.5, ymax = Inf, fill = "grey80"), colour = NA, alpha = 0.3)
+figure2 <- figure2 + geom_rect(aes(xmin = 552.89, xmax = 625.61, ymin = -0.5, ymax = Inf, fill = "grey90"), colour = NA, alpha = 0.3)
+figure2 <- figure2 + geom_errorbar(aes(xmin = predicted.mean.model1.CI.lb, xmax = predicted.mean.model1.CI.ub))
+figure2 <- figure2 + geom_point()
+figure2 <- figure2 + facet_nested(~ male+ health + ses)
+figure2 <- figure2 + coord_flip(clip="off")
+figure2 <- figure2 + theme_classic() 
+figure2 <- figure2 + xlab("Predicted mean sp") + ylab("")
+figure2 <- figure2 + theme(axis.text.x = element_text(size = 11.5, angle = 90, vjust = 0.5, hjust=1),
+                           axis.text.y = element_text(size = 11.5),
+                           axis.title.y = element_text(size = 14),
+                           strip.placement = "inside",
+                           strip.text = element_text(size = 11.5),
+                           legend.position = "bottom",
+                           legend.text = element_text(size = 11.5),
+                           legend.title = element_text(size = 13))
+figure2 <- figure2 + scale_x_continuous(breaks=seq(325, 625, 25))
+figure2 <- figure2 + scale_y_continuous(labels=c("Male","Female"), breaks=c(1,0))
+figure2 <- figure2 + scale_color_gradient(low = "firebrick3", high ="#083563")
+figure2 <- figure2 + scale_fill_manual('PISA proficiency level', values = c("grey60", "grey70", "grey80","grey90"),
+                                       labels = c("1a", "2", "3", "4"),
+                                       guide = guide_legend(override.aes = list(alpha = 0.3)))
+figure2 <- figure2 + scale_shape_manual(values = c(16, 17))
+figure2 <- figure2 + guides(color = "none")
+figure2
+
+
+
+# Set working directory (e.g., "C:/users/Your.File")
+setwd("")
+
+png("figure2.png", width = 16, height = 6, units = "in", res=300)
+plot_grid(figure2)
+dev.off()
+
+
+
+
+
+
+# ---- Figure 3: Plot random effects ---- #
+
+# Select first imputed data frame
+df <- new_data 
+
+# Merge data
+data <- merge(bayes.random.effects.new, df, by = "strata")
+
+
+# Subset relevant variables for table and plotting
+data.plot <- subset(data, select = c("strata", "male", "health", "ses", 
+                                     "sp"))
+data.plot <- unique(data.plot)
+
+
+# Rename values for plotting
+data.plot <- data.plot %>% 
+  dplyr::mutate(male = dplyr::recode(male, 
+                                       `0`="female",
+                                       `1`="male"))
+
+data.plot <- data.plot %>% 
+  dplyr::mutate(health = dplyr::recode(health, 
+                                              `1`="health",
+                                              `2`="unhealth"))
+
+data.plot <- data.plot %>% 
+  dplyr::mutate(HISCED.abitur = dplyr::recode(HISCED.abitur, 
+                                              `0`="Below university entrance certificate",
+                                              `1`="At least university entrance certificate"))
+
+data.plot <- data.plot %>% 
+  dplyr::mutate(ses = dplyr::recode(ses, 
+                                                `1`="high ses",
+                                                `2`="low ses"))
+
+ 
+
+
+# Subset data
+data.plot.model1 <- subset(data.plot.new, select = c("strata", "male", "ses", "health", 
+                                                      "predicted.mean.model1", 
+                                                     "predicted.mean.model1.CI.lb", "predicted.mean.model1.CI.ub"))
+
+
+
+
+
+
+ 
+
+
+### Plot figure 2
+figure3 <- ggplot(data = data.plot, aes(x = Estimate.Intercept, y = gender, color = gender))
+figure3 <- figure3 + geom_errorbar(aes(xmin = Q2.5.Intercept, xmax = Q97.5.Intercept))
+figure3 <- figure3 + geom_point() 
+figure3 <- figure3 + facet_nested(~  male+ health + ses)
+figure3 <- figure3 + coord_flip(clip="off", xlim = c(-45, 45))
+figure3 <- figure3 + theme_classic() 
+figure3 <- figure3 + xlab(expression(mu[0][j])) + ylab("")
+figure3 <- figure3 + theme(axis.text.x = element_text(size = 11.5, angle = 90, vjust = 0.5, hjust=1),
+                           axis.text.y = element_text(size = 11.5),
+                           axis.title.y = element_text(size = 14),
+                           strip.placement = "inside",
+                           strip.text = element_text( size = 11.5),
+                           legend.position = "none")
+figure3 <- figure3 + scale_x_continuous(breaks=seq(-50, 50, 5))
+figure3 <- figure3 + scale_color_manual(values=c("#083563", "firebrick3"))
+figure3
+
+
+
+# Set working directory (e.g., "C:/users/Your.File")
+setwd("")
+
+png("figure3.png", width = 15, height = 6, units = "in", res=300)
+plot_grid(figure3)
+grid.lines(x=c(0.046,0.995), y = c(0.497,0.497), gp = gpar(col = "grey40", lty=2))
+dev.off()
+
+
+# Figure 3 with arrows above
+png("figure3.png", width = 15, height = 6, units = "in", res=300)
+plot_grid(figure3)
+grid.lines(x=c(0.046,0.995), y = c(0.497,0.497), gp = gpar(col = "grey40", lty=2))
+grid.lines(x = unit(c(0.9835, 0.9835), "npc"), y = unit(c(0.835, 0.788), "npc"), gp = gpar(fill="black"),
+           arrow = arrow(length = unit(0.11, "inches"), ends="last", type="closed"))
+dev.off()
+
+
+
+```
+
+
+
+
+
+
+

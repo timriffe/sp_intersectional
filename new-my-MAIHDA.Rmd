@@ -5,6 +5,458 @@ date: "2023-10-06"
 output: html_document
 ---
 
+数据预处理，导入原始数据
+Data cleaning, import original data
+```{r}
+library(haven)
+
+df <- read_dta("E:/桌面/stata/社会参与/CLASSnew/class2020.dta")
+```
+
+
+
+政治参与变量 
+D13近三年您是否参加过本地居民委员会/村民委员会的投票选举？
+是... 1 
+没参加，但是知道有选举活动 ... 2 
+没参加，不知道是否有选举活动 ... 3
+
+重新分组得到新变量policy
+1：参加
+0：未参加
+
+political participation variable
+D13：Have you participated in voting for local residents committee/village committee in the past three years?
+yes: 1 
+I didn’t participate, but I knew there was an election event: 2
+I didn’t participate. I don’t know if there will be any election activities: 3
+
+Regroup "D13" to get new variable "policy" 
+1: Participate
+0: Did not participate
+```{r}
+table(df$D13)
+df$policy <- ifelse(df$D13 %in% c(1), 1, 0)
+table(df$policy)
+```
+
+
+志愿活动变量 D15_3 和 D15_6
+D15_3请问过去一年中，参加环境卫生保护的频率是？
+D15_6.请问过去一年中，参加需要专业技术的志愿服务的频率是？ 
+0:没参与
+1：一年几次
+2：每月至少一次
+3：每周至少一次
+4：几乎每天
+
+重新分组D15_3 和 D15_6
+1：参加
+0：未参加
+
+Volunteer activity variables D15_3 and D15_6
+D15_3 In the past year, how often did you participate in environmental sanitation protection?
+D15_6. In the past year, how often did you participate in volunteer services that required professional skills?
+0: Not participating
+1: Several times a year
+2: At least once a month
+3: At least once a week
+4: Almost every day
+
+Regroup "D15_3 and D15_6" to get new variable "nD15_3 and nD15_6" 
+1: Participate
+0: Not participating
+
+```{r}
+df$nD15_3 <- ifelse(df$D15_3 == 0, 0, 1)
+df$nD15_6 <- ifelse(df$D15_6 == 0, 0, 1)
+table(df$nD15_3)
+table(df$nD15_6)
+```
+
+身体锻炼变量 G2
+G2:您参加体育锻炼的频度是：
+平均每月不足 1 次……………………………….1 
+平均每月 1 次以上，但每周不足 1 次…2 
+平均每周 1 次……………………………………….3 
+平均每周 2 次……………………………………….4 
+平均每周 3 次……………………………………….5 
+平均每周 4 次……………………………………….6 
+平均每周 5 次……………………………………….7 
+平均每周 6 次……………………………………….8 
+平均每周 7 次及以上…………………………….9 
+
+重新分组D15_3 和 D15_6
+(1/2=0) 0：每周不足 1 次以下
+(3/9=1) 1：每周不足 1 次及以上
+
+Physical exercise variable G2
+G2: How often do you participate in physical exercise:
+On average, less than 1 time per month……………………….1
+On average, more than once a month, but less than once a week……………………….2
+An average of 1 time per week…………………………………….3
+Average 2 times a week…………………………………….4
+An average of 3 times a week…………………………………….5
+An average of 4 times a week…………………………………….6
+Average 5 times per week…………………………………….7
+Average 6 times per week…………………………………….8
+Average of 7 times per week and above……………….9
+
+Regroup Regroup "G2" to get new variable "exe" 
+(1/2=0) 0: Less than once a week
+(3/9=1) 1: Less than once a week or more
+```{r}
+table(df$G2)
+df$exe <- ifelse(df$G2 %in% c(1, 2), 0, 1)
+table(df$exe)
+```
+
+
+社会参与变量 D15_2_1 到 D15_2_6
+过去一年中，您参加以下活动的情况是？
+D15_2_1 宗教活动 
+D15_2_2 上老年大学或者参加培训课程
+D15_2_3 看电视/听广播/读书/看报/听戏
+D15_2_4 唱歌/弹奏乐器 
+D15_2_5 打麻将/下棋/打牌等
+D15_2_6 广场舞
+
+other Social participation variables D15_2_1 to D15_2_6
+In the past year, how have you participated in the following activities?
+D15_2_1 Religious activities
+D15_2_2 Go to a senior college or participate in a training course
+D15_2_3 Watching TV/listening to the radio/reading/reading newspapers
+D15_2_4 Singing/playing an instrument
+D15_2_5 Play mahjong/chess/cards, etc.
+D15_2_6 Square Dance
+Answer:
+0: Not participating
+1: Several times a year
+2: At least once a month
+3: At least once a week
+4: Almost every day
+
+Regroup "D15_2_1 ~ D15_2_6" to get new variable "nD15_2_1 ~ nD15_2_6" 
+1: Participate
+0: Not participating
+```{r}
+
+df$nD15_2_1 <- ifelse(df$D15_2_1 == 0, 0, 1)
+df$nD15_2_2 <- ifelse(df$D15_2_2 == 0, 0, 1)
+df$nD15_2_3 <- ifelse(df$D15_2_3 == 0, 0, 1)
+df$nD15_2_4 <- ifelse(df$D15_2_4 == 0, 0, 1)
+df$nD15_2_5 <- ifelse(df$D15_2_5 == 0, 0, 1)
+df$nD15_2_6 <- ifelse(df$D15_2_6 == 0, 0, 1)
+
+table(df$nD15_2_1)
+table(df$nD15_2_2)
+table(df$nD15_2_3)
+table(df$nD15_2_4)
+table(df$nD15_2_5)
+table(df$nD15_2_6)
+```
+
+计算 sp 变量
+Calculate the sum of sp
+```{r}
+df$sp <- df$policy + df$nD15_3 + df$nD15_6 + df$nD15_2_1 + df$nD15_2_2 + df$nD15_2_3 + df$nD15_2_4 + df$nD15_2_5 + df$nD15_2_6 + df$exe
+table(df$sp)
+```
+
+ 
+A1.性别：
+男 .. 1 
+女 .. 2
+A1. Gender:
+1:Male  
+2:Female  
+Regroup "A1" to get new variable "male" 
+1: male
+0: female
+```{r}
+table(df$A1)
+df$male <- ifelse(df$A1 == 1, "male", "female")
+table(df$male)
+```
+
+收入变量 C10_1_1_open
+C10_1_1_open is a continuous variable
+First define 9999998 and 9999999 as missing values
+Then group the "C10_1_1_open" to get new variable "income"
+0: 80~2300: Low income
+1: 2301/5000: middle income
+2: 5001/10000: upper-middle income
+3: Others: high income
+```{r}
+table(df$C10_1_1_open)
+df$C10_1_1_open[df$C10_1_1_open %in% c(9999998, 9999999)] <- NA
+df$income <- cut(df$C10_1_1_open, breaks = quantile(df$C10_1_1_open, probs = seq(0, 1, by = 1/3), na.rm = TRUE), labels = c("Low", "Medium", "High"), include.lowest = TRUE)
+levels(df$income) <- c("Low Income", "Medium Income", "High Income")
+table(df$income)
+```
+More than half of the values "income" are missing
+Linear imputation of income based on household expenditure variables"C11_1_1_open" ("family expense", fewer missing values)
+Get a continuous variable with a value of 1~3
+In order to ensure that the categories are positive, the imputed continuous variables are classified (rounded)
+(1~1.5 = 1) (1.5~2.5 = 2) (2.5~3 = 3)
+This step is done in stata, I don’t know how to implement it in R
+```{r}
+# 对income进行线性插补
+# Perform linear interpolation on income
+table(df$C11_1_1_open)
+# 重新编码C11_1_1_open中的缺失值 
+# Recode missing values in C11_1_1_open
+df$C11_1_1_open[df$C11_1_1_open %in% c(999998, 999999)] <- NA
+
+# 使用线性插补填充income 
+# Use linear interpolation to fill income
+df$a <- approx(df$C11_1_1_open, df$income, method = "linear", rule = 2)$y
+
+# 调整incomenew为正整数 
+# Adjust incomenew to a positive integer
+df$incomenew <- cut(df$a, breaks = c(1, 1.5, 2.5, 3), labels = c(1, 2, 3), include.lowest = TRUE)
+
+# 移除中间变量a 
+# Remove intermediate variable a
+df <- df[, !(names(df) %in% c("a"))]
+```
+
+
+  
+ 
+A10.您的户口属于？
+农业户口 ............................................................... 1 
+非农业户口 ........................................................... 2 
+由农业户口改为统一居民户口 ........................... 3 
+由非农业户口改为统一居民户口 ....................... 4 
+其他（请注明：__________） .......................... 5
+A10.Does your household registration belong to?
+Agricultural household registration  ............... 1 
+Non-agricultural household  ............ 2 
+Change from agricultural household registration to unified residential household registration ............. 3
+Change from non-agricultural household registration to unified resident household registration ............. 4
+Others (please specify: __________)  ....... 5
+
+group the "A10" to get new variable "hukou"
+1：urban
+0：not urban
+```{r}
+table(df$A10)
+df$hukou <- ifelse(df$A10 == 1, "是", "否")
+table(df$hukou)
+```
+
+A5_2 您的文化程度是：
+不识字  ............... 1 
+私塾/扫盲班 ................. 2 
+小学  .................... 3 
+初中  ................... 4 
+高中/中专 ............... 5 
+大专  .................. 6 
+本科及以上 ……………………7 
+A5_2 What is your education level:
+Illiterate ............. 1
+Private school/literacy class ............. 2
+Elementary school ............. 3
+Junior high school ............. 4
+High School/Technical Secondary School............ 5
+College ............. 6
+Bachelor degree and above……………………7
+
+group the "A5_2" to get new variable "edu"
+0：1~2: 文盲
+1: 3: 小学 
+2: 4: 初中 
+3: 5~7: 高中及以上 
+
+0:1~2: Illiterate
+1: 3: Elementary school
+2: 4: junior high school
+3: 5~7: High school and above
+
+```{r}
+table(df$A5_2)
+library(dplyr)
+df <- df %>%
+  mutate(edu = case_when(
+    A5_2 %in% c(1, 2) ~ 0,
+    A5_2 == 3 ~ 1,
+    A5_2 == 4 ~ 2,
+    A5_2 %in% c(5, 6, 7) ~ 3,
+    TRUE ~ NA_real_
+  ))
+levels(df$edu) <- c("文盲", "小学", "初中", "高中及以上")
+attr(df$edu, "label") <- "受教育程度"
+table(df$edu)
+```
+
+CES-D 抑郁量表:E2
+1. 过去一周您觉得自己心情很好吗？  
+2. 过去一周您觉得孤单吗？  
+3. 过去一周您觉得心里很难过吗？  
+4. 过去一周您觉得自己的日子过得很不错吗？ 
+5. 过去一周您觉得不想吃东西吗？  
+6. 过去一周您睡眠不好吗？ 
+7. 过去一周您觉得自己不中用了吗？   
+8. 过去一周您觉得自己没事可做吗？  
+9. 过去一周您觉得生活中有很多乐趣（有意思的事情）吗？ 
+答案：
+1:没有 
+2:有时 
+3:经常 
+9:无法回答
+CES-D Depression Scale:E2
+1. How good were you in your mood over the past week?
+2. Have you felt lonely in the past week?
+3. Have you felt sad in the past week?
+4. How did you feel you had a good time in the past week?
+5. Have you felt like you didn’t want to eat in the past week?
+6. Did you have trouble sleeping in the past week?
+7. Have you felt like you were useless this past week?
+8. Did you feel like you had nothing to do in the past week?
+9. Did you feel that there was a lot of fun (interesting things) in your life in the past week?
+Answer:
+1:No
+2:sometimes
+3: often
+9: Unable to answer
+
+
+首先将回答“9”定义为缺失值
+然后，将E2_1 E2_4 E2_9三道题的答案转为 分数越高越抑郁 E2_1 E2_4 E2_9
+最后将9项得分加总，以10分和17分为抑郁倾向和抑郁高风险的划界分
+得到ced变量
+0：无抑郁风险
+1：抑郁倾向
+2：抑郁高风险
+First define the answer "9" as a missing value
+Then, the answers to the three questions E2_1 E2_4 E2_9 are converted into The higher the score, the more depressed E2_1 E2_4 E2_9
+Finally, the 9 scores were summed up, and 10 and 17 were used to delineate depression tendency and high risk of depression.
+get “ced” variable
+0: No risk of depression
+1: Depressive tendencies
+2: High risk of depression
+```{r}
+df[, c("E2_1", "E2_2", "E2_3", "E2_4", "E2_5", "E2_6", "E2_7", "E2_8", "E2_9")] <- lapply(df[, c("E2_1", "E2_2", "E2_3", "E2_4", "E2_5", "E2_6", "E2_7", "E2_8", "E2_9")], function(x) ifelse(x == 9, NA, x))
+
+df$NE2_1 <- 4 - df$E2_1
+df$NE2_4 <- 4 - df$E2_4
+df$NE2_9 <- 4 - df$E2_9
+
+df$ced1 <- df$NE2_1 + df$E2_2 + df$E2_3 + df$NE2_4 + df$E2_5 + df$E2_6 + df$E2_7 + df$E2_8 + df$NE2_9
+df$ced <- cut(df$ced1, breaks = c(-Inf, 9, 16, 27), labels = c("0", "1", "2"), include.lowest = TRUE)
+levels(df$ced) <- c("0", "1", "2")
+table(df$ced)
+```
+
+自评健康
+Self-rated health
+B1. How do you feel about your current physical health?
+Very healthy...................... 1
+Relatively healthy ........................ 2
+General........................3
+Relatively unhealthy...................... 4
+Very unhealthy ........................ 5
+Unable to answer......................9
+
+First define the answer "9" as a missing value
+group the "B1" to get new variable "srh"
+0:1~2:healthy
+1:3:general
+2:4~5:unhealthy
+```{r}
+df$B1[df$B1 == 9] <- NA
+df$srh <- ifelse(df$B1 %in% c(1, 2), 0,
+                 ifelse(df$B1 == 3, 1,
+                        ifelse(df$B1 %in% c(4, 5), 2, NA)))
+table(df$srh)
+```
+
+IADL
+The instrumental daily living ability scale includes 10 indicators, namely, talking on the phone, dressing up, going up and down stairs, walking outside, taking public transportation, shopping, managing money, lifting, cooking, and doing housework. Each item is divided into three levels: "No help from others", "Need some help" and "Can't do it at all". If the answer is "can't do it at all" or "needs some help", it is judged to be disabled; if the answer is "no help from others", it is judged to be self-care.
+* If 0 IADLs are disabled, the function is considered normal;
+*Disablement of IADLs 1-5 is regarded as low function;
+*Disability of 6-10 IADLs is regarded as significant functional impairment.
+
+```{r}
+df$nB4_1 <- ifelse(df$B4_1 %in% c(2, 3), 1, 0)
+df$nB4_2 <- ifelse(df$B4_2 %in% c(2, 3), 1, 0)
+df$nB6_1 <- ifelse(df$B6_1 %in% c(2, 3), 1, 0)
+df$nB6_3 <- ifelse(df$B6_3 %in% c(2, 3), 1, 0)
+df$nB6_4 <- ifelse(df$B6_4 %in% c(2, 3), 1, 0)
+df$nB6_5 <- ifelse(df$B6_5 %in% c(2, 3), 1, 0)
+df$nB6_6 <- ifelse(df$B6_6 %in% c(2, 3), 1, 0)
+df$nB6_7 <- ifelse(df$B6_7 %in% c(2, 3), 1, 0)
+df$nB6_8 <- ifelse(df$B6_8 %in% c(2, 3), 1, 0)
+df$nB6_9 <- ifelse(df$B6_9 %in% c(2, 3), 1, 0)
+
+df$IADL2020 <- df$nB4_1 + df$nB4_2 + df$nB6_1 + df$nB6_3 + df$nB6_4 + df$nB6_5 + df$nB6_6 + df$nB6_7 + df$nB6_8 + df$nB6_9
+df$IADL <- cut(df$IADL2020, breaks = c(-Inf, 0, 5, 10), labels = c("0", "1", "2"), include.lowest = TRUE)
+table(df$IADL)
+```
+
+
+Remove a small number of missing values
+```{r}
+Data <- Data[!is.na(Data$eduu), ]
+
+Data <- Data[!is.na(Data$srhh), ]
+Data <- Data[!is.na(Data$sp), ]
+Data <- Data[!is.na(Data$cedd), ]
+```
+
+
+
+
+LCA analysis
+```{r}
+library(poLCA)
+library(haven)
+Data <- read_dta("E:/桌面/R/新建文件夹/myMAIHDA/11.dta")
+```
+
+
+```{r, eval = FALSE}
+vars <- c("ced", "srh", "IADL", "edu","hukou")
+for (i in 1:length(vars)){
+	Data[,vars[i]] <- Data[,vars[i]]+1
+}
+```
+
+
+```{r}
+f <- as.formula(cbind(cedd, srhh, IADLL)~1)
+LCA2 <- poLCA(f, data=Data, nclass=2)
+```
+
+
+```{r}
+#slide13:
+plot(LCA2)
+#predicted class membership is in:
+LCA2$predclass[1:30]
+#could be used as another variable (part of the data):
+Data$health <- LCA2$predclass
+```
+
+
+```{r}
+h<- as.formula(cbind(incomenew, edu, hukuo)~1)
+lca2 <- poLCA(f, data=Data, nclass=2)
+#slide13:
+plot(lca2)
+#predicted class membership is in:
+lca2$predclass[1:30]
+#could be used as another variable (part of the data):
+Data$ses <-lca2$predclass
+```
+
+ 
+
+
+
+
+MAIHDA analysis
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```

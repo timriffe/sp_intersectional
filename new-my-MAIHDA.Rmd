@@ -1,7 +1,7 @@
 ---
 title: "Social Participation Intersectionality code testing"
 author: "Yan Liu and Tim Riffe"
-date: "2023-10-06"
+date: "2024-01-08"
 output: html_document
 ---
 
@@ -180,49 +180,54 @@ table(df$male)
 ```
 
 收入变量 C10_1_1_open
-C10_1_1_open is a continuous variable
-First define 9999998 and 9999999 as missing values
-Then group the "C10_1_1_open" to get new variable "income"
-0: 80~2300: Low income
-1: 2301/5000: middle income
-2: 5001/10000: upper-middle income
-3: Others: high income
+
+
+For the measurement of personal income(C10_1_1_open), there are more than half of the missing values in the original data, so I used the variable with fewer missing values among the income-related variables that can be selected: household expenditure(C11_1_1_open) to perform linear interpolation on income.
+
+1: <5000: Low income
+2: 5001/10000: middle income
+3: >10000: high income
+
+
+收入变量 C10_1_1_open
+Income variable C10_1_1_open
 ```{r}
-table(df$C10_1_1_open)
-df$C10_1_1_open[df$C10_1_1_open %in% c(9999998, 9999999)] <- NA
-df$income <- cut(df$C10_1_1_open, breaks = quantile(df$C10_1_1_open, probs = seq(0, 1, by = 1/3), na.rm = TRUE), labels = c("Low", "Medium", "High"), include.lowest = TRUE)
-levels(df$income) <- c("Low Income", "Medium Income", "High Income")
-table(df$income)
+df$C10_1_1_open[df$C10_1_1_open %in% c(999999,9999996,9999998, 9999999)] <- NA
+sum(is.na(df$C10_1_1_open))
 ```
-More than half of the values "income" are missing
-Linear imputation of income based on household expenditure variables"C11_1_1_open" ("family expense", fewer missing values)
-Get a continuous variable with a value of 1~3
-In order to ensure that the categories are positive, the imputed continuous variables are classified (rounded)
-(1~1.5 = 1) (1.5~2.5 = 2) (2.5~3 = 3)
-This step is done in stata, I don’t know how to implement it in R
+
+通过C11_1_1_open：“过去12个月，您家平均每月总支出多少” 线性插补
+By C11_1_1_open: "What is your family's average monthly total expenditure in the past 12 months" Linear interpolation
 ```{r}
-# 对income进行线性插补
-# Perform linear interpolation on income
-table(df$C11_1_1_open)
-# 重新编码C11_1_1_open中的缺失值 
-# Recode missing values in C11_1_1_open
-df$C11_1_1_open[df$C11_1_1_open %in% c(999998, 999999)] <- NA
-
-# 使用线性插补填充income 
-# Use linear interpolation to fill income
-df$a <- approx(df$C11_1_1_open, df$income, method = "linear", rule = 2)$y
-
-# 调整incomenew为正整数 
-# Adjust incomenew to a positive integer
-df$incomenew <- cut(df$a, breaks = c(1, 1.5, 2.5, 3), labels = c(1, 2, 3), include.lowest = TRUE)
-
-# 移除中间变量a 
-# Remove intermediate variable a
-df <- df[, !(names(df) %in% c("a"))]
+df$C11_1_1_open[df$C11_1_1_open %in% c(999998,999999)] <- NA
+sum(is.na(df$C11_1_1_open))
+```
+删除用于插补的变量的缺失值
+Remove missing values for variables used for imputation
+```{r}
+df <- subset(df, !is.na(C11_1_1_open))
+```
+进行线性插补
+perform linear interpolation
+```{r}
+fit <- lm(C10_1_1_open ~ C11_1_1_open, data = df)
+# 预测缺失值  Predict missing values
+pred <- predict(fit, newdata = df[is.na(df$C10_1_1_open),])
+# 替换缺失值为预测值 Replace missing values with predicted values
+df$C10_1_1_open[is.na(df$C10_1_1_open)] <- pred 
+```
+分组编码
+block coding
+```{r}
+df$income <- cut(df$C10_1_1_open, 
+                 breaks = c(100, 5000, 10000, 408000),
+                 labels = c("低收入", "中等收入", "高收入"))
+table(df$income)
 ```
 
 
   
+
  
 A10.您的户口属于？
 农业户口 ............................................................... 1 
@@ -396,16 +401,52 @@ table(df$IADL)
 ```
 
 
-Remove a small number of missing values
-```{r}
-Data <- Data[!is.na(Data$eduu), ]
 
-Data <- Data[!is.na(Data$srhh), ]
-Data <- Data[!is.na(Data$sp), ]
-Data <- Data[!is.na(Data$cedd), ]
+
+查看缺失值
+View missing values
+```{r}
+any(is.na(df$sp))
+any(is.na(df$srh))
+any(is.na(df$ced))
+any(is.na(df$IADL))
+any(is.na(df$edu))
+any(is.na(df$hukou))
+any(is.na(df$income))
+```
+删除缺失值
+Remove missing values
+```{r}
+df <- subset(df, !is.na(srh))
+df <- subset(df, !is.na(ced))
+df <- subset(df, !is.na(edu))
+df <- subset(df, !is.na(income))
 ```
 
+View all variables used
+Y：
+SES:edu、hukou、income
+health condition：srh、ced、IADL
+male
+```{r}
+table(df$sp)
+table(df$srh)
+table(df$ced)
+table(df$IADL)
+table(df$edu)
+table(df$hukou)
+table(df$income)
+table(df$male)
+```
 
+Keep the variables used in our next analysis to Df
+```{r}
+Df <- df[, c("sp", "srh", "ced", "IADL", "edu", "hukou", "income", "male")]
+
+```
+ 
+
+#LCA analysis needs to be replaced 
 
 
 LCA analysis
@@ -451,7 +492,6 @@ lca2$predclass[1:30]
 Data$ses <-lca2$predclass
 ```
 
- 
 
 
 

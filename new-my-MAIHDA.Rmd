@@ -180,6 +180,8 @@ table(df$male)
 ```
 
 收入变量 C10_1_1_open
+
+
 For the measurement of personal income(C10_1_1_open), there are more than half of the missing values in the original data, so I used the variable with fewer missing values among the income-related variables that can be selected: household expenditure(C11_1_1_open) to perform linear interpolation on income.
 
 1: <5000: Low income
@@ -222,6 +224,9 @@ df$income <- cut(df$C10_1_1_open,
                  labels = c("低收入", "中等收入", "高收入"))
 table(df$income)
 ```
+
+
+  
 
  
 A10.您的户口属于？
@@ -397,6 +402,7 @@ table(df$IADL)
 
 
 
+
 查看缺失值
 View missing values
 ```{r}
@@ -485,9 +491,6 @@ lca2$predclass[1:30]
 #could be used as another variable (part of the data):
 Data$ses <-lca2$predclass
 ```
-
- 
-
 
 
 
